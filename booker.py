@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(description="Try to book an appointment at berl
 parser.add_argument("--name", required=True, help="The name of the applicant")
 parser.add_argument("--email", required=True, help="The email of the applicant")
 parser.add_argument("--url", default=START_URL, help="The start orl of the booking process")
+parser.add_argument("--interval", default=30, type=int, help="The interval the booking is tried")
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -35,7 +36,7 @@ if __name__ == "__main__":
             svc = BookingService(url, debug=False)
             if svc.book(name=args.name, email=args.email):
                 break
-            time.sleep(30)
+            time.sleep(max(30, args.interval))
         except KeyboardInterrupt:
             logger.info("Got keyboard interrupt - stopping.")
             break
