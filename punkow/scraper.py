@@ -1,18 +1,12 @@
-import argparse
 import contextlib
-import datetime
 import logging
-import time
 
 import requests
-
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = 'https://service.berlin.de'
-START_URL = '/terminvereinbarung/termin/tag.php?termin=1&dienstleister=122301&anliegen[]=120686&herkunft=1'  # anmeldung wohnung pankow
-# START_URL = '/terminvereinbarung/termin/tag.php?termin=1&dienstleister=327427&anliegen[]=318998&herkunft=1' # einbürgerung pankow
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 BLANK_URL = '/terminvereinbarung/termin/blank.png'
 REGISTER_URL = "/terminvereinbarung/termin/register/"
@@ -188,33 +182,3 @@ class BookingService(object):
         return False
 
 
-parser = argparse.ArgumentParser(description="Try to book an appointment at berlin cvil services")
-parser.add_argument("--name", required=True, help="The name of the applicant")
-parser.add_argument("--email", required=True, help="The email of the applicant")
-parser.add_argument("--url", default=START_URL, help="The start orl of the booking process")
-
-if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
-
-    args = parser.parse_args()
-
-    url = args.url
-    if url.startswith(BASE_URL):
-        url = url[len(BASE_URL):]
-        logger.info("Use url %s", url)
-
-    while True:
-        try:
-            logger.info("Try to get an appointment at %s", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            svc = BookingService(url, debug=False)
-            if svc.book(name=args.name, email=args.email):
-                break
-            time.sleep(30)
-        except KeyboardInterrupt:
-            logger.info("Got keyboard interrupt - stopping.")
-            break
-        except:
-            logger.exception("Got an exception while booking an appointment")
