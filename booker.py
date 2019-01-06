@@ -3,7 +3,7 @@ import logging
 import datetime
 import time
 
-from punkow.scraper import BookingService, BASE_URL
+from punkow.scraper import BookingData, BookingService, BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +33,11 @@ if __name__ == "__main__":
     while True:
         try:
             logger.info("Try to get an appointment at %s", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            data = BookingData(name=args.name, email=args.email)
             svc = BookingService(url, debug=False)
-            if svc.book(name=args.name, email=args.email):
-                break
+            for booked in svc.book([data]):
+                if data == booked:
+                    break
             time.sleep(max(30, args.interval))
         except KeyboardInterrupt:
             logger.info("Got keyboard interrupt - stopping.")

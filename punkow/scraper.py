@@ -1,5 +1,6 @@
 import contextlib
 import logging
+import typing
 
 import requests
 from bs4 import BeautifulSoup
@@ -18,6 +19,11 @@ def print_url(r, *args, **kwargs):
     logger.debug("loaded: %s - status: %d", r.url, r.status_code)
     logger.debug("request headers:  %s", r.request.headers)
     logger.debug("response headers: %s", r.headers)
+
+
+class BookingData(typing.NamedTuple):
+    name: str
+    email: str
 
 
 class BookingService(object):
@@ -172,13 +178,19 @@ class BookingService(object):
 
         return True
 
-    def book(self, name, email):
+    def book(self, data: typing.List[BookingData]):
         logging.info("Look for appontments at %s", BASE_URL + self.start_url)
+
+        data_iter = iter(data)
+        cur_data = next(data_iter, None)
+        if cur_data is None:
+            return
+
         for day_url in self._iter_bookable_day_urls(self.start_url):
             with self._local_referrer():
                 for slot_url in self._iter_bookable_times(day_url):
-                    if self._book_appointment(slot_url, name, email):
-                        return True
-        return False
-
-
+                    if self._book_appointment(slot_url, cur_data.name, cur_data.email):
+                        cur_data = next(data_iter)
+                        if cur_data is None:
+                            return
+        return
