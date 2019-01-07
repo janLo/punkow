@@ -24,6 +24,7 @@ def print_url(r, *args, **kwargs):
 class BookingData(typing.NamedTuple):
     name: str
     email: str
+    id: typing.Optional[int]
 
 
 class BookingService(object):
@@ -190,7 +191,8 @@ class BookingService(object):
             with self._local_referrer():
                 for slot_url in self._iter_bookable_times(day_url):
                     if self._book_appointment(slot_url, cur_data.name, cur_data.email):
-                        cur_data = next(data_iter)
+                        yield cur_data
+                        cur_data = next(data_iter, None)
                         if cur_data is None:
                             return
         return
