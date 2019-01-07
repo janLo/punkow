@@ -58,7 +58,7 @@ def _book(target: str, reqs: typing.List[_WorkerRequest], debug = False) -> typi
 
     booked_ids = []
     try:
-        svc = scraper.BookingService(target, debug=debug)
+        svc = scraper.BookingService(target, debug=debug, hide_sensitive_data=True)
         for booked in svc.book(data):
             booked_ids.append(booked.id)
     except:
