@@ -55,7 +55,7 @@ def _book(target: str, reqs: typing.List[_WorkerRequest], debug=False) -> typing
     if target.startswith(scraper.BASE_URL):
         target = target[len(scraper.BASE_URL):]
 
-    logger.info("Try to book %d appointments for %s", len(reqs), target)
+    logger.debug("Try to book %d appointments for %s", len(reqs), target)
 
     booked_ids = []
     try:

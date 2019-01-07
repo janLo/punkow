@@ -191,7 +191,7 @@ class BookingService(object):
             logger.error("Cannot find success message")
             return False
 
-        logger.info("Success: %s", success.text.strip())
+        logger.debug("Success: %s", success.text.strip())
 
         result = {key: register_html.find("span", {"class": f"summary_{key}"}).text.strip()
                   for key in ("name", "mail", "authKey", "processId")}
