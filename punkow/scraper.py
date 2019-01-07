@@ -28,10 +28,11 @@ class BookingData(typing.NamedTuple):
 
 
 class BookingService(object):
-    def __init__(self, start_url, debug=True):
+    def __init__(self, start_url, debug=True, hide_sensitive_data=False):
         self.session = None
         self.start_url = start_url
         self.debug = debug
+        self.sensitive = hide_sensitive_data
 
         self._init_session()
 
@@ -52,6 +53,8 @@ class BookingService(object):
             self.session.headers.update({'Referrer': old_referrer})
 
     def _print_details(self, zms, depth):
+        if self.sensitive:
+            depth = min(depth, 3)
         meta = {}
         groups = zms.find_all("div", "collapsible-toggle")
         for group in groups[:depth]:
@@ -167,7 +170,8 @@ class BookingService(object):
 
         formdata["process"] = process.attrs["value"]
 
-        logger.info("Book with: %s", formdata)
+        if not self.sensitive:
+            logger.info("Book with: %s", formdata)
 
         if self.debug:
             logger.warning("Not really booked as we're in debug mode!")
@@ -191,9 +195,12 @@ class BookingService(object):
 
         result = {key: register_html.find("span", {"class": f"summary_{key}"}).text.strip()
                   for key in ("name", "mail", "authKey", "processId")}
-        logger.info("  Registratred for: %s (%s)", result["name"], result["mail"])
-        logger.info("  To change or cancel use %s with the number %s and the code %s", BASE_URL + MANAGE_URL,
-                    result["processId"], result["authKey"])
+        if self.sensitive:
+            logger.info("  Registration with number %s", result["processId"])
+        else:
+            logger.info("  Registratred for: %s (%s)", result["name"], result["mail"])
+            logger.info("  To change or cancel use %s with the number %s and the code %s", BASE_URL + MANAGE_URL,
+                        result["processId"], result["authKey"])
 
         return True
 
