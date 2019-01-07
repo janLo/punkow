@@ -1,2 +1,9 @@
+click
+aiohttp
+aiohttp_jinja2
 beautifulsoup4
+email_validator
+jinja2
 requests
+sqlalchemy
+uvloop
