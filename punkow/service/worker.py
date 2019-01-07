@@ -18,23 +18,24 @@ class _WorkerRequest(typing.NamedTuple):
     id: int
     name: str
     email: str
+    target: str
 
 
 class RequestQueue(object):
     def __init__(self):
         self._targets = []
-        self._requests = {}
+        self._requests = []
 
     def enqueue(self, req: model.Request):
         if req.target not in self._requests:
-            self._requests[req.target] = []
             self._targets.append(req.target)
 
-        self._requests[req.target].append(_WorkerRequest(req.id, req.data.name, req.data.email))
+        self._requests.append(
+            _WorkerRequest(req.id, req.data.name, req.data.email, req.target))
 
     def iterate(self):
-        for target in self._targets:
-            yield target, self._requests[target]
+        for item in self._requests:
+            yield item.target, [item]
 
     def is_empty(self):
         return len(self._targets) == 0
@@ -45,7 +46,7 @@ class RequestQueue(object):
 
     @property
     def request_cnt(self):
-        return sum(len(x) for x in self._requests.values())
+        return len(self._requests)
 
 
 def _book(target: str, reqs: typing.List[_WorkerRequest], debug = False) -> typing.List[int]:
