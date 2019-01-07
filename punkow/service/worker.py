@@ -39,6 +39,14 @@ class RequestQueue(object):
     def is_empty(self):
         return len(self._targets) == 0
 
+    @property
+    def target_cnt(self):
+        return len(self._targets)
+
+    @property
+    def request_cnt(self):
+        return sum(len(x) for x in self._requests.values())
+
 
 def _book(target: str, reqs: typing.List[_WorkerRequest], debug = False) -> typing.List[int]:
     data = [scraper.BookingData(name=req.name, email=req.email, id=req.id)
@@ -46,14 +54,17 @@ def _book(target: str, reqs: typing.List[_WorkerRequest], debug = False) -> typi
     if target.startswith(scraper.BASE_URL):
         target = target[len(scraper.BASE_URL):]
 
+    logger.info("Try to book %d appointments for %s", len(reqs), target)
+
     booked_ids = []
     try:
         svc = scraper.BookingService(target, debug=debug)
         for booked in svc.book(data):
             booked_ids.append(booked.id)
     except:
-        print(target, reqs)
         logger.exception("Exception while booking")
+
+    logger.info("Booked %d appointments for %s", len(booked_ids), target)
 
     return booked_ids
 
@@ -88,6 +99,7 @@ class Worker(object):
             for req in qry:
                 requests.enqueue(req)
 
+            logger.info("Loaded %d requests for %d targets", requests.request_cnt, requests.target_cnt)
             return requests
 
     def cleanup_booked(self, booked):
