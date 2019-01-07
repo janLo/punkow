@@ -230,8 +230,7 @@ def simple_view(template):
 
 
 class App(object):
-    def __init__(self, config, database_manager: model.DatabaseManager):
-        self.config = config
+    def __init__(self, database_manager: model.DatabaseManager):
         self.db = database_manager
         self.app = web.Application()
 
@@ -239,7 +238,6 @@ class App(object):
         self.setup_routes()
 
     def setup_app(self):
-        self.app['config'] = self.config
         self.app['db'] = self.db
         aiohttp_jinja2.setup(
             self.app, loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
@@ -257,10 +255,10 @@ class App(object):
         self.app.router.add_get("/terms", simple_view("terms.html"))
 
     def run(self, host: str = None, port: int = None):
-        web.run_app(self.app, host=host or self.config.interface_host, port=port or self.config.interface_port)
+        web.run_app(self.app, host=host, port=port)
 
-    async def register_server(self):
+    async def register_server(self, host: str = None, port: int = None):
         app_runner = web.AppRunner(self.app, access_log=logger)
         await app_runner.setup()
-        site = web.TCPSite(app_runner, self.config.interface_host, self.config.interface_port)
+        site = web.TCPSite(app_runner, host, port)
         await site.start()
