@@ -49,7 +49,7 @@ class RequestQueue(object):
         return len(self._requests)
 
 
-def _book(target: str, reqs: typing.List[_WorkerRequest], debug = False) -> typing.List[int]:
+def _book(target: str, reqs: typing.List[_WorkerRequest], debug=False) -> typing.List[int]:
     data = [scraper.BookingData(name=req.name, email=req.email, id=req.id)
             for req in reqs]
     if target.startswith(scraper.BASE_URL):
@@ -117,6 +117,22 @@ class Worker(object):
 
             session.commit()
 
+    def cleanup_old(self):
+        cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=20)
+        with self._db.make_session_context() as session:
+            qry = session.query(model.Request) \
+                .options(joinedload(model.Request.data)) \
+                .filter(model.Request.data != None) \
+                .filter(model.Request.created < cutoff)
+
+            for item in qry:
+                item.resolved = datetime.datetime.utcnow()
+                item.state = "timeout"
+                if item.data is not None:
+                    session.delete(item.data)
+
+            session.commit()
+
     async def _run_once(self):
         requests = await self._loop.run_in_executor(None, self._request_queue)
 
@@ -130,6 +146,7 @@ class Worker(object):
                                                  functools.partial(_book, target, reqs, debug=self._debug)))
 
         await self._loop.run_in_executor(None, functools.partial(self.cleanup_booked, booked))
+        await self._loop.run_in_executor(None, self.cleanup_old)
 
     async def run(self):
         while True:
