@@ -136,5 +136,6 @@ class Worker(object):
             await self._run_once()
             end = datetime.datetime.utcnow()
             elapsed = (end - start).total_seconds()
-            logger.info("Booking run completed in %s seconds", elapsed)
-            await asyncio.sleep(max(0.0, self._interval - elapsed))
+            sleep = max(0.0, self._interval - elapsed)
+            logger.info("Booking run completed in %0.2f seconds - now sleep for %0.2f seconds", elapsed, sleep)
+            await asyncio.sleep(sleep)
