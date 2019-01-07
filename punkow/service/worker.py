@@ -99,7 +99,7 @@ class Worker(object):
             for req in qry:
                 requests.enqueue(req)
 
-            logger.info("Loaded %d requests for %d targets", requests.request_cnt, requests.target_cnt)
+            logger.debug("Loaded %d requests for %d targets", requests.request_cnt, requests.target_cnt)
             return requests
 
     def cleanup_booked(self, booked):
@@ -137,5 +137,5 @@ class Worker(object):
             end = datetime.datetime.utcnow()
             elapsed = (end - start).total_seconds()
             sleep = max(0.0, self._interval - elapsed)
-            logger.info("Booking run completed in %0.2f seconds - now sleep for %0.2f seconds", elapsed, sleep)
+            logger.debug("Booking run completed in %0.2f seconds - now sleep for %0.2f seconds", elapsed, sleep)
             await asyncio.sleep(sleep)
