@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% import 'macros.html' as forms %}
+
+{% block body %}
+
+    {{ forms.messages(errors=errors, messages=messages) }}
+
+    <div class="card">
+        <div class="card-header">New booking requst</div>
+        <div class="card-body">
+            <form method="post" action="/create">
+                <div class="row">
+                    {{ forms.input('url', "Start URL", description='The start url for your booking', data=data, errors=errors) }}
+                </div>
+                <div class="row">
+                    {{ forms.input('name', "Name", description='The name the booking is for (Your name)', data=data, errors=errors) }}
+                </div>
+                <div class="row">
+                    {{ forms.input('email', "E-Mail", type='email', description='Your email address (to get the booking confirmation)', data=data, errors=errors) }}
+                </div>
+                <div class="row">
+                    {{ forms.check_input('terms_accepted', "Accept terms", type='checkbox', value='accepted', description='Confirm that you have read and accepted the terms!', data=data, errors=errors) }}
+                </div>
+                <div class="row">
+                    <div class="col-lg">
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+{% endblock %}

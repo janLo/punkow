@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% import 'macros.html' as forms %}
+
+{% macro row(desc, value) %}
+    <tr>
+        <th>
+            {{ desc }}
+        </th>
+        <td>
+            {{ value|urlize(30, target="_blank", nofollow="true") }}
+        </td>
+    </tr>
+{% endmacro %}
+
+
+{% block body %}
+    {{ forms.messages(errors=errors, messages=messages) }}
+    {% if data is not none %}
+        <div class="card">
+            <div class="card-header">Details of booking request <strong>{{ data.key }}</strong></div>
+            <div class="card-body">
+                <div class="row">
+                    <table class="table">
+                        {{ row("URL:", data.target) }}
+                        {{ row("Status:", data.state) }}
+                        {{ row("Created:", data.created.strftime('%Y-%m-%d %H:%M')) }}
+                    </table>
+                </div>
+                <div class="row">
+                    {% block action %}
+                        {% if data.resolved is none %}
+                            <a class="btn btn-outline-danger col align-self-center" href="{{ del_url }}" role="button">Cancel
+                                request</a>
+                        {% else %}
+                            <div class="alert alert-warning col" role="alert">
+                                <strong>{{ data.resolved.strftime('%Y-%m-%d %H:%M') }}:</strong> This entry is not
+                                active anymore. All personal data is deleted!
+                            </div>
+                        {% endif %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

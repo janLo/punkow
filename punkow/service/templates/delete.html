@@ -1,0 +1,9 @@
+{% extends 'detail.html' %}
+
+{% block action %}
+    <div class="col align-self-center">
+        <form method="post" action="{{ del_url }}">
+            <button type="submit" class="btn btn-danger  btn-block ">Really cancel?</button>
+        </form>
+    </div>
+{% endblock %}

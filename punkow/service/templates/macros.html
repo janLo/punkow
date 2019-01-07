@@ -1,0 +1,34 @@
+{% macro input(id, label, type='text', description='', placeholder='', data={}, errors={}) %}
+    <div class="form-group col-lg{% if id in errors %} is-invalid{% endif %}">
+        <label for="{{ id }}">{{ label }}</label>
+        <input name="{{ id }}" type="{{ type }}"
+               class="form-control form-control-sm{% if id in errors %} is-invalid{% endif %}" id="{{ id }}"
+               aria-describedby="{{ id }}Help" placeholder="{{ placeholder }}" value="{{ data[id]|default("") }}">
+        <small id="{{ id }}Help" class="form-text text-muted">{{ description }}</small>
+    </div>
+{% endmacro %}
+
+{% macro check_input(id, label, type='checkbox', value='true', description='', placeholder='', data={}, errors={}) %}
+    <div class="form-group col-lg{% if id in errors %} is-invalid{% endif %}">
+        <label for="{{ id }}">{{ label }}</label>
+        <div class="form-check form-check-inline col-lg">
+        <input name="{{ id }}" type="{{ type }}"
+               class="form-check col-1{% if id in errors %} is-invalid{% endif %}" id="{{ id }}"
+               aria-describedby="{{ id }}Help" placeholder="{{ placeholder }}" value="{{ value }}">
+        <small id="{{ id }}Help" class="form-text text-muted">{{ description }}</small>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro messages(errors, messages=[]) %}
+    {% for msg in errors.values() %}
+        <div class="alert alert-danger" role="alert">
+            {{ msg }}
+        </div>
+    {% endfor %}
+    {% for msg in messages %}
+         <div class="alert alert-primary" role="alert">
+            {{ msg }}
+        </div>
+    {% endfor %}
+{% endmacro %}
