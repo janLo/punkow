@@ -71,7 +71,7 @@ class BookingService(object):
             title = title.text.strip()
             desc = next(desc.stripped_strings)
 
-            logging.info("  %s: %s", title, desc)
+            logging.debug("  %s: %s", title, desc)
             meta[title] = desc
 
         return meta
@@ -99,17 +99,17 @@ class BookingService(object):
             for m_div in months:
                 month_name = m_div.find("th", {"class": "month"}).text.strip()
                 if month_name in checked:
-                    logging.info("Month %s aleady checked - skipping", month_name)
+                    logging.debug("Month %s aleady checked - skipping", month_name)
                     continue
 
                 bookable = m_div.find_all('td', {"class": 'buchbar'})
-                logger.info("Found month %s with %d available days", month_name, len(bookable))
+                logger.debug("Found month %s with %d available days", month_name, len(bookable))
 
                 for day in bookable:
                     day_link = day.find("a")
 
                     if day_link and day_link != -1:
-                        logger.info("Search free slots for day %s. %s", day_link.text.strip(), month_name)
+                        logger.debug("Search free slots for day %s. %s", day_link.text.strip(), month_name)
                         yield day_link.attrs["href"]
 
                 checked.append(month_name)
@@ -123,7 +123,7 @@ class BookingService(object):
 
             html = self._fetch_soup(next_link["href"])
 
-        logger.info("No more days with appointments")
+        logger.debug("No more days with appointments")
 
     def _iter_bookable_times(self, day_url):
         html = self._fetch_soup(day_url)
@@ -137,7 +137,7 @@ class BookingService(object):
             head = row.find("th", {"class": "buchbar"})
 
             if head and head != 1:
-                logger.info("Found timeslot %s", head.text.strip())
+                logger.debug("Found timeslot %s", head.text.strip())
 
                 content = row.find("td", {"class": "frei"})
                 if not content or content == -1:
@@ -151,14 +151,14 @@ class BookingService(object):
 
                 yield link.attrs["href"]
 
-        logger.info("No more free slots for the day.")
+        logger.debug("No more free slots for the day.")
 
     def _book_appointment(self, slot_url, name=None, email=None):
         html = self._fetch_soup(slot_url)
 
         zms = html.find("div", {"class": "zms"})
 
-        logger.info("Loaded booking form:")
+        logger.debug("Loaded booking form:")
         self._print_details(zms, 4)
 
         formdata = {"familyName": name, "email": email, "form_validate": "1", "agbgelesen": "1"}
@@ -196,7 +196,7 @@ class BookingService(object):
         result = {key: register_html.find("span", {"class": f"summary_{key}"}).text.strip()
                   for key in ("name", "mail", "authKey", "processId")}
         if self.sensitive:
-            logger.info("  Registration with number %s", result["processId"])
+            logger.info("Registration for %s with number %s", self.start_url, result["processId"])
         else:
             logger.info("  Registratred for: %s (%s)", result["name"], result["mail"])
             logger.info("  To change or cancel use %s with the number %s and the code %s", BASE_URL + MANAGE_URL,
@@ -205,7 +205,7 @@ class BookingService(object):
         return True
 
     def book(self, data: typing.List[BookingData]):
-        logging.info("Look for appontments at %s", BASE_URL + self.start_url)
+        logging.info("Look for appointments at %s", BASE_URL + self.start_url)
 
         data_iter = iter(data)
         cur_data = next(data_iter, None)
