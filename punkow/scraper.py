@@ -85,22 +85,40 @@ class BookingService(object):
 
     def _iter_bookable_day_urls(self, start_url):
         html = self._fetch_soup(start_url)
-        months = html.find_all("div", {"class": "calendar-month-table"})
 
         zms = html.find("div", {"class": "zms"})
         self._print_details(zms, 2)
 
-        for m_div in months:
-            month_name = m_div.find("th", {"class": "month"})
-            bookable = m_div.find_all('td', {"class": 'buchbar'})
-            logger.info("Found month %s with %d available days", month_name.text.strip(), len(bookable))
+        checked = []
 
-            for day in bookable:
-                day_link = day.find("a")
+        while html is not None:
+            months = html.find_all("div", {"class": "calendar-month-table"})
+            for m_div in months:
+                month_name = m_div.find("th", {"class": "month"}).text.strip()
+                if month_name in checked:
+                    logging.info("Month %s aleady checked - skipping", month_name)
+                    continue
 
-                if day_link and day_link != -1:
-                    logger.info("Search free slots for day %s. %s", day_link.text.strip(), month_name.text.strip())
-                    yield day_link.attrs["href"]
+                bookable = m_div.find_all('td', {"class": 'buchbar'})
+                logger.info("Found month %s with %d available days", month_name, len(bookable))
+
+                for day in bookable:
+                    day_link = day.find("a")
+
+                    if day_link and day_link != -1:
+                        logger.info("Search free slots for day %s. %s", day_link.text.strip(), month_name)
+                        yield day_link.attrs["href"]
+
+                checked.append(month_name)
+
+            next_field = html.find("th", {"class": "next"})
+            if next_field is None or next_field == -1:
+                break
+            next_link = next_field.find("a")
+            if next_link is None or next_link == -1:
+                break
+
+            html = self._fetch_soup(next_link["href"])
 
         logger.info("No more days with appointments")
 
