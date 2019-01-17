@@ -63,7 +63,7 @@ class Timer(object):
     def _wait_time(self, now):
         for special in self._special_times:
             if special.is_between(now):
-                return 1
+                return 0.5
         return self._interval
 
     @contextlib.asynccontextmanager
