@@ -6,7 +6,7 @@ import logging
 import uvloop
 import click
 
-from punkow.service import interface, model, worker
+from punkow.service import interface, model, worker, timer
 
 
 @click.command()
@@ -15,7 +15,9 @@ from punkow.service import interface, model, worker
 @click.option("--db", default="sqlite:////tmp/punkow.db", help="The database uri")
 @click.option("--interval", default=50 * 5, type=int, help="The interval in which the worker should operate")
 @click.option("--debug", is_flag=True, help="Run in debug mode")
-def main(host, port, db, interval, debug):
+@click.option("--tz", default="CET", help="Timezone to use for special times")
+@click.option("--special", help="special time where the interval should be increased", multiple=True)
+def main(host, port, db, interval, debug, tz, special):
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     loop = asyncio.get_event_loop()
@@ -33,7 +35,9 @@ def main(host, port, db, interval, debug):
     db_mngr = model.DatabaseManager(db)
     db_mngr.create_schema()
 
-    wrk = worker.Worker(loop, db_mngr, interval=interval, debug=debug)
+    tm = timer.Timer(interval=interval, special_times=special, time_zone=tz)
+
+    wrk = worker.Worker(loop, db_mngr, tm=tm, debug=debug)
     loop.create_task(wrk.run())
 
     app = interface.App(db_mngr)

@@ -8,7 +8,7 @@ import typing
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from . import model
+from . import model, timer
 from .. import scraper
 
 logger = logging.getLogger(__name__)
@@ -72,10 +72,10 @@ def _book(target: str, reqs: typing.List[_WorkerRequest], debug=False) -> typing
 
 class Worker(object):
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, db: model.DatabaseManager, interval=5 * 60, debug=True):
+    def __init__(self, loop: asyncio.AbstractEventLoop, db: model.DatabaseManager, tm: timer.Timer, debug=True):
         self._loop = loop
         self._db = db
-        self._interval = interval
+        self._timer = tm
         self._debug = debug
         self._executor = concurrent.futures.ProcessPoolExecutor(max_workers=1)
 
@@ -150,10 +150,5 @@ class Worker(object):
 
     async def run(self):
         while True:
-            start = datetime.datetime.utcnow()
-            await self._run_once()
-            end = datetime.datetime.utcnow()
-            elapsed = (end - start).total_seconds()
-            sleep = max(0.0, self._interval - elapsed)
-            logger.debug("Booking run completed in %0.2f seconds - now sleep for %0.2f seconds", elapsed, sleep)
-            await asyncio.sleep(sleep)
+            with self._timer.timed():
+                await self._run_once()
