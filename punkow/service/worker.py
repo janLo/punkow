@@ -150,5 +150,5 @@ class Worker(object):
 
     async def run(self):
         while True:
-            with self._timer.timed():
+            async with self._timer.timed():
                 await self._run_once()
