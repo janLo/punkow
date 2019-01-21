@@ -1,9 +1,9 @@
 Punkow booked your appointment!
 
 The details are:
-{% for key,value in meta.items() %}
+{%- for key,value in meta.items() %}
 {{ key }}: {{ value }}
-{% endfor %}
+{%- endfor %}
 
 You can change or cancel the appointment at:
 {{ change_url }}
