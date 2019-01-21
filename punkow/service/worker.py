@@ -151,7 +151,7 @@ class Worker(object):
                     mail.send_success_email(req.email, booking)
 
             await self._loop.run_in_executor(None, functools.partial(self.cleanup_booked, booked_ids))
-            await self._loop.run_in_executor(None, self.cleanup_old)
+            await self._loop.run_in_executor(None, functools.partial(self.cleanup_old, mail))
 
     async def run(self):
         while True:
