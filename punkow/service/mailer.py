@@ -108,8 +108,11 @@ class AsyncMailQueue(object):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if len(self._queue) != 0:
-            await self._loop.run_in_executor(None, functools.partial(
-                concurrent.futures.wait, self._queue))
+            try:
+                await self._loop.run_in_executor(None, functools.partial(
+                    concurrent.futures.wait, self._queue))
+            except:
+                logger.exception("Exception in waiting for mail sending")
 
     def _append_task(self, coro):
         self._queue.append(asyncio.run_coroutine_threadsafe(coro, self._loop))
