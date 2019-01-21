@@ -76,7 +76,7 @@ class Mailer(object):
     async def send_success_email(self, email, booking: scraper.BookingResult):
         tpl = self._tpl.get_template("success.txt")
 
-        text = tpl.render(meta=booking.metadata, change_url=scraper.MANAGE_URL,
+        text = tpl.render(meta=booking.metadata, change_url=scraper.BASE_URL + scraper.MANAGE_URL,
                           process_id=booking.process_id, auth_code=booking.auth_key)
 
         await self._send_email(email, "Your appointment was booked", text)
@@ -109,7 +109,7 @@ class AsyncMailQueue(object):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if len(self._queue) != 0:
             await self._loop.run_in_executor(None, functools.partial(
-                concurrent.futures.wait(self._queue)))
+                concurrent.futures.wait, self._queue))
 
     def _append_task(self, coro):
         self._queue.append(asyncio.run_coroutine_threadsafe(coro, self._loop))
