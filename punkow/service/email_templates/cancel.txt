@@ -1,0 +1,8 @@
+Your punkow request was cancelled.
+
+You can review the details at:
+{{ base_url }}/{{ req_key }}
+
+You can try to insert a new request.
+
+Have a nice day.

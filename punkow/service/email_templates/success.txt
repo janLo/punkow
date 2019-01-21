@@ -1,0 +1,15 @@
+Punkow booked your appointment!
+
+The details are:
+{% for key,value in meta.items() %}
+{{ key }}: {{ value }}
+{% endfor %}
+
+You can change or cancel the appointment at:
+{{ change_url }}
+
+To do so, you need this data:
+Vorgangsnummer: {{ process_id }}
+Code: {{ auth_code }}
+
+Have a nice day!
