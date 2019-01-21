@@ -102,7 +102,7 @@ class AsyncMailQueue(object):
         self._mailer = mailer
         self._queue = []
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> AsyncMailQueue:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -110,7 +110,7 @@ class AsyncMailQueue(object):
             await asyncio.gather(*self._queue)
 
     def _append_task(self, coro):
-        self._queue.append(self._loop.create_task(coro))
+        self._queue.append(asyncio.run_coroutine_threadsafe(coro, self._loop))
 
     def send_success_email(self, email, booking: scraper.BookingResult):
         self._append_task(self._mailer.send_success_email(email, booking))

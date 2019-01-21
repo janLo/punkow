@@ -8,7 +8,7 @@ import typing
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from . import model, timer
+from . import model, timer, mailer
 from .. import scraper
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class RequestQueue(object):
         return len(self._requests)
 
 
-def _book(req: _WorkerRequest, debug=False) -> typing.Dict[int, scraper.BookingResult]:
+def _book(req: _WorkerRequest, debug=False) -> typing.Optional[scraper.BookingResult]:
     data = scraper.BookingData(name=req.name, email=req.email)
     target = req.target
     if req.target.startswith(scraper.BASE_URL):
@@ -57,26 +57,26 @@ def _book(req: _WorkerRequest, debug=False) -> typing.Dict[int, scraper.BookingR
 
     logger.debug("Try to book one appointment for %s", target)
 
-    bookings = {}  # type: typing.Dict[int, scraper.BookingResult]
     try:
         svc = scraper.BookingService(target, debug=debug, hide_sensitive_data=True)
         booked = svc.book(data)
         if booked is not None:
-            bookings[req.id] = booked
+            logger.info("Booked an appointments for %s", target)
+            return booked
     except:
         logger.exception("Exception while booking")
 
-    logger.info("Booked an appointments for %s", target)
-
-    return bookings
+    return None
 
 
 class Worker(object):
 
-    def __init__(self, loop: asyncio.AbstractEventLoop, db: model.DatabaseManager, tm: timer.Timer, debug=True):
+    def __init__(self, loop: asyncio.AbstractEventLoop, db: model.DatabaseManager,
+                 tm: timer.Timer, mail: mailer.Mailer, debug=True):
         self._loop = loop
         self._db = db
         self._timer = tm
+        self._mailer = mail
         self._debug = debug
         self._executor = concurrent.futures.ProcessPoolExecutor(max_workers=1)
 
@@ -118,7 +118,7 @@ class Worker(object):
 
             session.commit()
 
-    def cleanup_old(self):
+    def cleanup_old(self, mail_queue: mailer.AsyncMailQueue):
         cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=20)
         with self._db.make_session_context() as session:
             qry = session.query(model.Request) \
@@ -130,6 +130,7 @@ class Worker(object):
                 item.resolved = datetime.datetime.utcnow()
                 item.state = "timeout"
                 if item.data is not None:
+                    mail_queue.send_cancel_email(item.data.email, item.key)
                     session.delete(item.data)
 
             session.commit()
@@ -140,14 +141,17 @@ class Worker(object):
         if requests.is_empty():
             return
 
-        booked = []
-        for req in requests.iterate():
-            booking = await self._loop.run_in_executor(self._executor,
-                                                       functools.partial(_book, req, debug=self._debug))
-            booked.extend(booking)
+        booked_ids = []
+        async with self._mailer.start_queue() as mail:
+            for req in requests.iterate():
+                booking = await self._loop.run_in_executor(self._executor,
+                                                           functools.partial(_book, req, debug=self._debug))
+                if booking is not None:
+                    booked_ids.append(req.id)
+                    mail.send_success_email(req.email, booking)
 
-        await self._loop.run_in_executor(None, functools.partial(self.cleanup_booked, booked))
-        await self._loop.run_in_executor(None, self.cleanup_old)
+            await self._loop.run_in_executor(None, functools.partial(self.cleanup_booked, booked_ids))
+            await self._loop.run_in_executor(None, self.cleanup_old)
 
     async def run(self):
         while True:

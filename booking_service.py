@@ -6,7 +6,7 @@ import logging
 import uvloop
 import click
 
-from punkow.service import interface, model, worker, timer
+from punkow.service import interface, model, worker, timer, mailer
 
 
 @click.command()
@@ -15,9 +15,17 @@ from punkow.service import interface, model, worker, timer
 @click.option("--db", default="sqlite:////tmp/punkow.db", help="The database uri")
 @click.option("--interval", default=50 * 5, type=int, help="The interval in which the worker should operate")
 @click.option("--debug", is_flag=True, help="Run in debug mode")
+@click.option("--mail-from", required=True, help="The Email Address to send the mails from")
+@click.option("--mail-host", required=True, help="The Email SMTP Host")
+@click.option("--mail-port", default=587, type=int, help="The Email SMTP Port")
+@click.option("--mail-tls", is_flag=True, help="Use TLS for SMTP")
+@click.option("--mail-user", default=None, help="The Email SMTP password")
+@click.option("--mail-passwd", default=None, help="The Email SMTP username")
+@click.option("--domain", required=True, help="The domain this service is running on")
 @click.option("--tz", default="CET", help="Timezone to use for special times")
 @click.option("--special", help="special time where the interval should be increased", multiple=True)
-def main(host, port, db, interval, debug, tz, special):
+def main(host, port, db, interval, debug, tz, special,
+         mail_from, mail_host, mail_port, mail_tls, mail_user, mail_passwd, domain):
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     loop = asyncio.get_event_loop()
@@ -35,9 +43,14 @@ def main(host, port, db, interval, debug, tz, special):
     db_mngr = model.DatabaseManager(db)
     db_mngr.create_schema()
 
+    url = f"https://{domain}"
+    mail_cfg = mailer.MailConfig(from_addr=mail_from, host=mail_host, port=mail_port, tls=mail_tls,
+                                 user=mail_user, passwd=mail_passwd)
+    mail = mailer.Mailer(loop=loop, config=mail_cfg, base_url=url)
+
     tm = timer.Timer(interval=interval, special_times=special, time_zone=tz)
 
-    wrk = worker.Worker(loop, db_mngr, tm=tm, debug=debug)
+    wrk = worker.Worker(loop, db_mngr, tm=tm, mail=mail, debug=debug)
     loop.create_task(wrk.run())
 
     app = interface.App(db_mngr)
