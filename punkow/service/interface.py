@@ -230,8 +230,9 @@ def simple_view(template):
 
 
 class App(object):
-    def __init__(self, database_manager: model.DatabaseManager):
+    def __init__(self, database_manager: model.DatabaseManager, base_url: str):
         self.db = database_manager
+        self.base_url = base_url
         self.app = web.Application()
 
         self.setup_app()
@@ -243,6 +244,7 @@ class App(object):
             self.app, loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 
         self.app['static_root_url'] = '/static'
+        self.app['cfg_base_url'] = self.base_url
 
     def setup_routes(self):
         self.app.router.add_static('/static/',
