@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import concurrent.futures
 import dataclasses
@@ -70,7 +72,7 @@ class Mailer(object):
     async def _send_email(self, to_addr, subject, text):
         await self._loop.run_in_executor(self._executor, _do_send_email, self._config, to_addr, subject, text)
 
-    async def send_success(self, email, booking: scraper.BookingResult):
+    async def send_success_email(self, email, booking: scraper.BookingResult):
         tpl = self._tpl.get_template("success.txt")
 
         text = tpl.render(meta=booking.metadata, change_url=scraper.MANAGE_URL,
@@ -89,3 +91,32 @@ class Mailer(object):
 
         text = tpl.render(base_url=self._base_url, req_key=req_key)
         await self._send_email(email, "Your booking request was canceled", text)
+
+    def start_queue(self) -> AsyncMailQueue:
+        return AsyncMailQueue(self._loop, self)
+
+
+class AsyncMailQueue(object):
+    def __init__(self, loop: asyncio.AbstractEventLoop, mailer: Mailer):
+        self._loop = loop
+        self._mailer = mailer
+        self._queue = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if len(self._queue) != 0:
+            await asyncio.gather(*self._queue)
+
+    def _append_task(self, coro):
+        self._queue.append(self._loop.create_task(coro))
+
+    def send_success_email(self, email, booking: scraper.BookingResult):
+        self._append_task(self._mailer.send_success_email(email, booking))
+
+    def send_confirmation_email(self, email, req_key):
+        self._append_task(self._mailer.send_confirmation_email(email, req_key))
+
+    async def send_cancel_email(self, email, req_key):
+        self._append_task(self._mailer.send_cancel_email(email, req_key))
