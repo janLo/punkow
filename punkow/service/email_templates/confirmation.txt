@@ -1,6 +1,6 @@
 Punkow started to book an appointment for you.
 
 You can review or cancel your request at:
-{{ base_url }}/{{ req_key }}
+{{ base_url }}/show/{{ req_key }}
 
 Good luck!
