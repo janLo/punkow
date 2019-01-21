@@ -49,25 +49,26 @@ class RequestQueue(object):
         return len(self._requests)
 
 
-def _book(req: _WorkerRequest, debug=False) -> typing.List[int]:
-    data = scraper.BookingData(name=req.name, email=req.email, id=req.id)
+def _book(req: _WorkerRequest, debug=False) -> typing.Dict[int, scraper.BookingResult]:
+    data = scraper.BookingData(name=req.name, email=req.email)
     target = req.target
     if req.target.startswith(scraper.BASE_URL):
         target = req.target[len(scraper.BASE_URL):]
 
     logger.debug("Try to book one appointment for %s", target)
 
-    booked_ids = []
+    bookings = {}  # type: typing.Dict[int, scraper.BookingResult]
     try:
         svc = scraper.BookingService(target, debug=debug, hide_sensitive_data=True)
-        for booked in svc.book(data):
-            booked_ids.append(booked.id)
+        booked = svc.book(data)
+        if booked is not None:
+            bookings[req.id] = booked
     except:
         logger.exception("Exception while booking")
 
-    logger.info("Booked %d appointments for %s", len(booked_ids), target)
+    logger.info("Booked an appointments for %s", target)
 
-    return booked_ids
+    return bookings
 
 
 class Worker(object):
@@ -141,9 +142,9 @@ class Worker(object):
 
         booked = []
         for req in requests.iterate():
-            booked.extend(
-                await self._loop.run_in_executor(self._executor,
-                                                 functools.partial(_book, req, debug=self._debug)))
+            booking = await self._loop.run_in_executor(self._executor,
+                                                       functools.partial(_book, req, debug=self._debug))
+            booked.extend(booking)
 
         await self._loop.run_in_executor(None, functools.partial(self.cleanup_booked, booked))
         await self._loop.run_in_executor(None, self.cleanup_old)
