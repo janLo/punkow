@@ -53,7 +53,7 @@ def main(host, port, db, interval, debug, tz, special,
     wrk = worker.Worker(loop, db_mngr, tm=tm, mail=mail, debug=debug)
     loop.create_task(wrk.run())
 
-    app = interface.App(db_mngr, base_url=url)
+    app = interface.App(db_mngr, mail, base_url=url)
     loop.create_task(app.register_server(host, port))
 
     loop.run_forever()
