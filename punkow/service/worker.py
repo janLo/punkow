@@ -23,8 +23,8 @@ class _WorkerRequest(typing.NamedTuple):
 
 class RequestQueue(object):
     def __init__(self):
-        self._targets = []
-        self._requests = []
+        self._targets = []  # type: typing.List[str]
+        self._requests = []  # type: typing.List[_WorkerRequest]
 
     def enqueue(self, req: model.Request):
         if req.target not in self._requests:
@@ -33,9 +33,9 @@ class RequestQueue(object):
         self._requests.append(
             _WorkerRequest(req.id, req.data.name, req.data.email, req.target))
 
-    def iterate(self):
+    def iterate(self) -> typing.Generator[_WorkerRequest, None, None]:
         for item in self._requests:
-            yield item.target, [item]
+            yield item
 
     def is_empty(self):
         return len(self._targets) == 0
@@ -49,13 +49,13 @@ class RequestQueue(object):
         return len(self._requests)
 
 
-def _book(target: str, reqs: typing.List[_WorkerRequest], debug=False) -> typing.List[int]:
-    data = [scraper.BookingData(name=req.name, email=req.email, id=req.id)
-            for req in reqs]
-    if target.startswith(scraper.BASE_URL):
-        target = target[len(scraper.BASE_URL):]
+def _book(req: _WorkerRequest, debug=False) -> typing.List[int]:
+    data = scraper.BookingData(name=req.name, email=req.email, id=req.id)
+    target = req.target
+    if req.target.startswith(scraper.BASE_URL):
+        target = req.target[len(scraper.BASE_URL):]
 
-    logger.debug("Try to book %d appointments for %s", len(reqs), target)
+    logger.debug("Try to book one appointment for %s", target)
 
     booked_ids = []
     try:
@@ -140,10 +140,10 @@ class Worker(object):
             return
 
         booked = []
-        for target, reqs in requests.iterate():
+        for req in requests.iterate():
             booked.extend(
                 await self._loop.run_in_executor(self._executor,
-                                                 functools.partial(_book, target, reqs, debug=self._debug)))
+                                                 functools.partial(_book, req, debug=self._debug)))
 
         await self._loop.run_in_executor(None, functools.partial(self.cleanup_booked, booked))
         await self._loop.run_in_executor(None, self.cleanup_old)

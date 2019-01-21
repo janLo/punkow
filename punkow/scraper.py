@@ -27,6 +27,14 @@ class BookingData(typing.NamedTuple):
     id: typing.Optional[int]
 
 
+class BookingResult(typing.NamedTuple):
+    name: str
+    email: str
+    process_id: str
+    auth_key: str
+    metadata: typing.Dict[str, str]
+
+
 class BookingService(object):
     def __init__(self, start_url, debug=True, hide_sensitive_data=False):
         self.session = None
@@ -53,8 +61,6 @@ class BookingService(object):
             self.session.headers.update({'Referrer': old_referrer})
 
     def _print_details(self, zms, depth):
-        if self.sensitive:
-            depth = min(depth, 3)
         meta = {}
         groups = zms.find_all("div", "collapsible-toggle")
         for group in groups[:depth]:
@@ -71,7 +77,9 @@ class BookingService(object):
             title = title.text.strip()
             desc = next(desc.stripped_strings)
 
-            logging.debug("  %s: %s", title, desc)
+            if not self.sensitive:
+                logging.debug("  %s: %s", title, desc)
+
             meta[title] = desc
 
         return meta
@@ -159,7 +167,7 @@ class BookingService(object):
         zms = html.find("div", {"class": "zms"})
 
         logger.debug("Loaded booking form:")
-        self._print_details(zms, 4)
+        details = self._print_details(zms, 4)
 
         formdata = {"familyName": name, "email": email, "form_validate": "1", "agbgelesen": "1"}
         process = zms.find("input", {"id": "process"})
@@ -204,20 +212,12 @@ class BookingService(object):
 
         return True
 
-    def book(self, data: typing.List[BookingData]):
+    def book(self, data: BookingData):
         logging.info("Look for appointments at %s", BASE_URL + self.start_url)
-
-        data_iter = iter(data)
-        cur_data = next(data_iter, None)
-        if cur_data is None:
-            return
 
         for day_url in self._iter_bookable_day_urls(self.start_url):
             with self._local_referrer():
                 for slot_url in self._iter_bookable_times(day_url):
-                    if self._book_appointment(slot_url, cur_data.name, cur_data.email):
-                        yield cur_data
-                        cur_data = next(data_iter, None)
-                        if cur_data is None:
-                            return
+                    if self._book_appointment(slot_url, data.name, data.email):
+                        yield data
         return
