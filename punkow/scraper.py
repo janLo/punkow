@@ -24,7 +24,6 @@ def print_url(r, *args, **kwargs):
 class BookingData(typing.NamedTuple):
     name: str
     email: str
-    id: typing.Optional[int]
 
 
 class BookingResult(typing.NamedTuple):
@@ -174,7 +173,7 @@ class BookingService(object):
         if process is None or process == -1:
             logger.error("No process id found")
             self.session.get(BASE_URL + ABORT_URL)
-            return False
+            return None
 
         formdata["process"] = process.attrs["value"]
 
@@ -185,19 +184,19 @@ class BookingService(object):
             logger.warning("Not really booked as we're in debug mode!")
             self.session.get(BASE_URL + ABORT_URL)
             logger.warning("Aborted!")
-            return True
+            return None
 
         response = self.session.post(BASE_URL + REGISTER_URL, data=formdata)
         if response.status_code != 200:
             logger.error("Could not book appointment. Status: %d", response.status_code)
-            return False
+            return None
 
         register_html = BeautifulSoup(response.content, 'html.parser')
         success = register_html.find("div", {"class": "submit-success-message"})
 
         if success is None or success == -1:
             logger.error("Cannot find success message")
-            return False
+            return None
 
         logger.debug("Success: %s", success.text.strip())
 
@@ -210,14 +209,18 @@ class BookingService(object):
             logger.info("  To change or cancel use %s with the number %s and the code %s", BASE_URL + MANAGE_URL,
                         result["processId"], result["authKey"])
 
-        return True
+        booking = BookingResult(name=result["name"], email=result["mail"],
+                                process_id=result["processId"], auth_key=result["authKey"],
+                                metadata=details)
+        return booking
 
-    def book(self, data: BookingData):
+    def book(self, data: BookingData) -> typing.Optional[BookingResult]:
         logging.info("Look for appointments at %s", BASE_URL + self.start_url)
 
         for day_url in self._iter_bookable_day_urls(self.start_url):
             with self._local_referrer():
                 for slot_url in self._iter_bookable_times(day_url):
-                    if self._book_appointment(slot_url, data.name, data.email):
-                        yield data
-        return
+                    booking = self._book_appointment(slot_url, data.name, data.email)
+                    if self.debug or booking is not None:
+                        return booking
+        return None
