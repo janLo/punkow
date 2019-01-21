@@ -79,7 +79,7 @@ class BookingService(object):
             if not self.sensitive:
                 logging.debug("  %s: %s", title, desc)
 
-            meta[title] = desc
+            meta[title] = desc.strip()
 
         return meta
 
