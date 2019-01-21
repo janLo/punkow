@@ -15,7 +15,7 @@ from aiohttp import web
 from email_validator import validate_email, EmailNotValidError
 from sqlalchemy.orm import joinedload
 
-from . import model
+from . import model, mailer
 
 logger = logging.Logger(__name__)
 
@@ -97,14 +97,12 @@ class _ViewBase(web.View):
         super(_ViewBase, self).__init__(*args, **kwargs)
 
     @property
+    def _mail(self) -> mailer.Mailer:
+        return self.request.app['mailer']
+
+    @property
     def _db(self) -> model.DatabaseManager:
         return self.request.app['db']  # type: model.DatabaseManager
-
-
-class IndexView(_ViewBase):
-    @aiohttp_jinja2.template("index.html")
-    def get(self):
-        pass
 
 
 class CreateEntryView(_ViewBase):
@@ -144,6 +142,15 @@ class CreateEntryView(_ViewBase):
                     session.add_all([request, request_data])
 
                     session.commit()
+
+                    loop = asyncio.get_event_loop()
+
+                    def send_mail(mail, email, key):
+                        loop.create_task(mail.send_confirmation_email(email, key))
+
+                    loop.call_soon_threadsafe(
+                        functools.partial(send_mail, self._mail, request_data.email, request.key))
+
                     raise web.HTTPFound(self.request.app.router["detail"].url_for(entry_id=key))
 
         errors.update(validator.errors)
@@ -230,8 +237,9 @@ def simple_view(template):
 
 
 class App(object):
-    def __init__(self, database_manager: model.DatabaseManager, base_url: str):
+    def __init__(self, database_manager: model.DatabaseManager, mail: mailer.Mailer, base_url: str):
         self.db = database_manager
+        self.mail = mail
         self.base_url = base_url
         self.app = web.Application()
 
@@ -240,6 +248,7 @@ class App(object):
 
     def setup_app(self):
         self.app['db'] = self.db
+        self.app["mailer"] = self.mail
         aiohttp_jinja2.setup(
             self.app, loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 
@@ -250,7 +259,7 @@ class App(object):
         self.app.router.add_static('/static/',
                                    path=os.path.join(os.path.dirname(__file__), 'static'),
                                    name='static')
-        self.app.router.add_view("/", IndexView, name="index")
+        self.app.router.add_view("/", simple_view("index.html"), name="index")
         self.app.router.add_view("/create", CreateEntryView, name="create")
         self.app.router.add_view("/show/{entry_id}", EntryDetailView, name="detail")
         self.app.router.add_view("/cancel/{entry_id}", DeleteEntryView, name="cancel")
