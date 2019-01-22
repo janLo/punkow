@@ -215,7 +215,7 @@ class BookingService(object):
         return booking
 
     def book(self, data: BookingData) -> typing.Optional[BookingResult]:
-        logging.info("Look for appointments at %s", BASE_URL + self.start_url)
+        logger.info("Look for appointments at %s", BASE_URL + self.start_url)
 
         for day_url in self._iter_bookable_day_urls(self.start_url):
             with self._local_referrer():
