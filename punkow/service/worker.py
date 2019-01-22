@@ -208,5 +208,7 @@ class Worker(object):
         self._running = False
 
         if self._run_future is not None:
+            self._timer.cancel()
+
             await self._run_future
             self._run_future = None

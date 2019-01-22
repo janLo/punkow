@@ -269,7 +269,7 @@ class App(object):
     def run(self, host: str = None, port: int = None):
         web.run_app(self.app, host=host, port=port)
 
-    async def register_server(self, host: str = None, port: int = None):
+    async def start(self, host: str = None, port: int = None):
         app_runner = web.AppRunner(self.app, access_log=logger)
         await app_runner.setup()
         self.site = web.TCPSite(app_runner, host, port)

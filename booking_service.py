@@ -38,8 +38,10 @@ def main(host, port, db, interval, debug, tz, special,
 
     logging.basicConfig(
         level=level,
-        #        format='%(asctime)s %(levelname)s: %(message)s',
+        format='%(levelname)s: %(name)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S')
+
+    logger = logging.getLogger("booking_service")
 
     db_mngr = model.DatabaseManager(db)
     db_mngr.create_schema()
@@ -55,12 +57,15 @@ def main(host, port, db, interval, debug, tz, special,
     wrk.start()
 
     app = interface.App(db_mngr, mail, base_url=url)
-    loop.create_task(app.register_server(host, port))
+    loop.create_task(app.start(host, port))
 
     def stop():
+        logger.info("Stop Punkow ... ")
+
         async def _do_stop():
             await asyncio.gather(wrk.stop(), app.stop())
             loop.stop()
+            logger.info("Goodbye!")
 
         loop.create_task(_do_stop())
 

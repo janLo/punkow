@@ -78,7 +78,7 @@ class Timer(object):
         elapsed = (end - start).total_seconds()
         sleep = max(0.0, self._wait_time(end) - elapsed)
         logger.debug("Booking run completed in %0.2f seconds - now sleep for %0.2f seconds", elapsed, sleep)
-        self._sleep_coro = asyncio.sleep(sleep)
+        self._sleep_coro = asyncio.ensure_future(asyncio.sleep(sleep))
         try:
             await self._sleep_coro
         except asyncio.CancelledError:
