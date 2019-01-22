@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import signal
 
 import uvloop
 import click
@@ -51,10 +52,20 @@ def main(host, port, db, interval, debug, tz, special,
     tm = timer.Timer(interval=interval, special_times=special, time_zone=tz)
 
     wrk = worker.Worker(loop, db_mngr, tm=tm, mail=mail, debug=debug)
-    loop.create_task(wrk.run())
+    wrk.start()
 
     app = interface.App(db_mngr, mail, base_url=url)
     loop.create_task(app.register_server(host, port))
+
+    def stop():
+        async def _do_stop():
+            await asyncio.gather(wrk.stop(), app.stop())
+            loop.stop()
+
+        loop.create_task(_do_stop())
+
+    loop.add_signal_handler(signal.SIGINT, stop)
+    loop.add_signal_handler(signal.SIGTERM, stop)
 
     loop.run_forever()
 

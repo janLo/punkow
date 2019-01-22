@@ -94,6 +94,10 @@ class Worker(object):
         self._timer = tm
         self._mailer = mail
         self._debug = debug
+
+        self._running = False
+        self._run_future = None
+
         self._executor = concurrent.futures.ProcessPoolExecutor(max_workers=2)
 
     def _request_queue(self) -> RequestBatchQueue:
@@ -189,6 +193,20 @@ class Worker(object):
             await self._loop.run_in_executor(None, functools.partial(self.cleanup_old, mail))
 
     async def run(self):
-        while True:
+        while self._running:
             async with self._timer.timed():
-                await self._run_once()
+                if self._running:
+                    await self._run_once()
+
+    def start(self):
+        assert not self._running, "Already running"
+        self._running = True
+
+        self._run_future = self._loop.create_task(self.run())
+
+    async def stop(self):
+        self._running = False
+
+        if self._run_future is not None:
+            await self._run_future
+            self._run_future = None

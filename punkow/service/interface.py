@@ -242,6 +242,7 @@ class App(object):
         self.mail = mail
         self.base_url = base_url
         self.app = web.Application()
+        self.site = None  # type: web.TCPSite
 
         self.setup_app()
         self.setup_routes()
@@ -271,5 +272,9 @@ class App(object):
     async def register_server(self, host: str = None, port: int = None):
         app_runner = web.AppRunner(self.app, access_log=logger)
         await app_runner.setup()
-        site = web.TCPSite(app_runner, host, port)
-        await site.start()
+        self.site = web.TCPSite(app_runner, host, port)
+        await self.site.start()
+
+    async def stop(self):
+        if self.site is not None:
+            await self.site.stop()

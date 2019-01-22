@@ -48,6 +48,8 @@ class Timer(object):
         self._special_times = []  # type: typing.List[TimeStream]
         self._time_zone = pytz.timezone(time_zone)
 
+        self._sleep_coro = None # type: asyncio.Future
+
         now = self._now()
 
         for line in special_times:
@@ -76,7 +78,17 @@ class Timer(object):
         elapsed = (end - start).total_seconds()
         sleep = max(0.0, self._wait_time(end) - elapsed)
         logger.debug("Booking run completed in %0.2f seconds - now sleep for %0.2f seconds", elapsed, sleep)
-        await asyncio.sleep(sleep)
+        self._sleep_coro = asyncio.sleep(sleep)
+        try:
+            await self._sleep_coro
+        except asyncio.CancelledError:
+            pass
+        finally:
+            self._sleep_coro = None
+
+    def cancel(self):
+        if self._sleep_coro is not None:
+            self._sleep_coro.cancel()
 
 
 if __name__ == '__main__':
